@@ -1,52 +1,69 @@
-const AWS = require("aws-sdk");
+require("dotenv").config();
+const {
+  DynamoDBClient,
+  ScanCommand,
+  PutItemCommand,
+  GetItemCommand,
+  DeleteItemCommand,
+} = require("@aws-sdk/client-dynamodb");
+const { unmarshall, marshall } = require("@aws-sdk/util-dynamodb");
 
-AWS.config.update({
-  region: "us-west-2",
-});
-
-const dynamoClient = new AWS.DynamoDB.DocumentClient();
-const TABLE_NAME= "users";
+const ddb = new DynamoDBClient({ region: process.env.AWS_REGION });
+const TABLE_NAME = process.env.TABLE_NAME;
 
 const getUsers = async () => {
-  // Configure parameters for the scan
-  const params = {
+  const command = new ScanCommand({
     TableName: TABLE_NAME,
-  };
+  });
 
-  let results = await dynamoClient.scan(params).promise();
-  return results; 
-}
+  const response = await ddb.send(command);
+  let unmarshalledItems = response.Items.map((item) => {
+    return unmarshall(item);
+  });
+
+  response.Items = unmarshalledItems;
+
+  return response;
+};
 
 const getUserById = async (id) => {
-    const params = {
-        TableName: TABLE_NAME,
-        Key: {
-            user_id: id,
-        }
-    }
+  const command = new GetItemCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      user_id: marshall(id),
+    },
+  });
 
-    return await dynamoClient.get(params).promise();
-}
+  const response = await ddb.send(command);
+  response.Item = unmarshall(response.Item);
 
-const createUser = async (user) => {  
-    const params = {
-        TableName: TABLE_NAME,
-        Item: user,
-    }
+  return response;
+};
 
-    return await dynamoClient.put(params).promise();
-}
+const createUser = async (user) => {
+  const command = new PutItemCommand({
+    TableName: TABLE_NAME,
+    Item: marshall(user),
+  });
+
+  const response = await ddb.send(command);
+
+  return response;
+};
 
 const deleteUser = async (id) => {
-    const params = {
-        TableName: TABLE_NAME,
-        Key: {
-            user_id: id
-        }
-    }
+  const command = new DeleteItemCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      user_id: marshall(id),
+    },
+  });
 
-    return await dynamoClient.delete(params).promise();
-}
+  const response = await ddb.send(command);
+  console.log(response);
+};
+
+deleteUser("40");
 
 module.exports = {
   getUsers,

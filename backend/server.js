@@ -1,7 +1,11 @@
 const express = require("express");
 const routes = require("./routes");
+const requestLogger = require("./middleware/logger");
 
 const app = express();
+
+// Add Request Logging middleware
+app.use(requestLogger);
 
 // Add body parsing middleware
 app.use(express.urlencoded({extended: true}));

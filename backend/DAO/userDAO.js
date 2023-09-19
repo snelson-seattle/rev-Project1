@@ -10,7 +10,7 @@ const {
 
 const ddb = new DynamoDBClient({ region: process.env.AWS_REGION });
 const client = DynamoDBDocumentClient.from(ddb);
-const TABLE_NAME = process.env.TABLE_NAME;
+const TABLE_NAME = process.env.USER_TABLE;
 
 const getUsers = async () => {
   const command = new ScanCommand({

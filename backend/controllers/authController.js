@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const DAO = require("../DAO");
+const jwt = require("jsonwebtoken");
 
 const login = async (req, res) => {};
 
@@ -41,4 +42,6 @@ const register = async (req, res) => {
 
 module.exports = {
   register,
+  login,
+  logout
 };

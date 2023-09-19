@@ -1,10 +1,111 @@
 const bcrypt = require("bcrypt");
-const DAO = require("../DAO");
 const jwt = require("jsonwebtoken");
+const DAO = require("../DAO");
 
-const login = async (req, res) => {};
+const login = async (req, res) => {
+  const { email, password } = req.body;
 
-const logout = async (req, res) => {};
+  // Make sure request included an email and password
+  if (!email || !password) {
+    return res.status(400).json({ message: "email and password are required" });
+  }
+
+  try {
+    // Check if user already exists with given email
+    const existingUser = await DAO.users.getUser(email);
+    if (!existingUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Check for password match
+    const passwordMatch = await bcrypt.compare(password, existingUser.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Create Access and Refresh Tokens
+    const accessToken = jwt.sign(
+      {
+        UserInfo: {
+          email: existingUser.email,
+          manager: existingUser.manager,
+        },
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "600s" } // This should be set much higher when moving to production
+    );
+
+    const refreshToken = jwt.sign(
+      { email: existingUser.email },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    // Create a secure cookie with the refresh token
+    res.cookie("jwt", refreshToken, {
+      httpOnly: true,
+      secure: false, // https
+      sameSite: "None",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(200).json({ accessToken });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+const logout = async (req, res) => {
+  const cookies = req.cookies;
+  if (!cookies?.jwt) {
+    return res.sendStatus(204); // No Content
+  }
+
+  res.clearCookie("jwt", { httpOnly: true, sameSite: "None", secure: false });
+  res.status(200).json({ message: "Logout successful" });
+};
+
+const refresh = async (req, res) => {
+  const cookies = req.cookies;
+
+  if (!cookies?.jwt) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const refreshToken = cookies.jwt;
+
+  jwt.verify(
+    refreshToken,
+    process.env.REFRESH_TOKEN_SECRET,
+    async (err, decoded) => {
+      if (err) {
+        console.error(err);
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const existingUser = await DAO.users.getUser(decoded.email);
+      console.log(existingUser);
+      if (!existingUser) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Create a new access token
+      const accessToken = jwt.sign(
+        {
+          UserInfo: {
+            email: existingUser.email,
+            manager: existingUser.manager,
+          },
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "10s" } // This should be set much higher when moving to production
+      );
+
+      res.status(200).json({ accessToken });
+    }
+  );
+};
 
 const register = async (req, res) => {
   const { email, password } = req.body;
@@ -17,7 +118,7 @@ const register = async (req, res) => {
   try {
     // Check if user already exists with given email
     const existingUser = await DAO.users.getUser(email);
-    if (existingUser?.email) {
+    if (existingUser) {
       return res.status(409).json({ message: "email address is in use" });
     }
 
@@ -29,11 +130,35 @@ const register = async (req, res) => {
       manager: false,
     });
 
-    if (newUser) {
-      return res.status(201).json({ message: "New user created successfully" });
-    }
+    // Create Access and Refresh Tokens
+    const accessToken = jwt.sign(
+      {
+        UserInfo: {
+          email: newUser.email,
+          manager: newUser.manager,
+        },
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "600s" } // This should be set much higher when moving to production
+    );
 
-    return res.status(500).json({ message: "Something went wrong" });
+    const refreshToken = jwt.sign(
+      { email: newUser.email },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    // Create a secure cookie with the refresh token
+    res.cookie("jwt", refreshToken, {
+      httpOnly: true,
+      secure: false, // https
+      sameSite: "None",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res
+      .status(201)
+      .json({ message: "New user created successfully", accessToken });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Something went wrong" });
@@ -41,7 +166,8 @@ const register = async (req, res) => {
 };
 
 module.exports = {
+  refresh,
   register,
   login,
-  logout
+  logout,
 };

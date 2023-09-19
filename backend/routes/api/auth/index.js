@@ -1,15 +1,17 @@
 const router = require("express").Router();
-const {register} = require("../../../controllers/authController");
+const authController = require("../../../controllers/authController");
+const loginLimiter = require("../../../middleware/loginLimit");
 
-router.post("/login", (req, res) => {
-    res.json({message: "This is the /api/auth/login route"});
-});
+// POST - /api/auth/login
+router.post("/login", loginLimiter, authController.login);
 
-router.post("/logout", (req, res) => {
-    res.json({message: "This is the /api/auth/logout route"});
-});
+// POST - /api/auth/logout
+router.post("/logout", authController.logout);
+
+// GET - /api/auth/refresh
+router.get("/refresh", authController.refresh);
 
 // POST - /api/auth/register
-router.post("/register", register);
+router.post("/register", authController.register);
 
 module.exports = router;

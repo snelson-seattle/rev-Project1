@@ -1,4 +1,3 @@
-require("dotenv").config();
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
@@ -19,7 +18,7 @@ const getUsers = async () => {
 
   const response = await client.send(command);
 
-  if (response.Items !== undefined) {
+  if (response["$metadata"].httpStatusCode === 200) {
     return response.Items;
   } else {
     return [];
@@ -35,8 +34,8 @@ const getUser = async (email) => {
   });
 
   const response = await client.send(command);
-
-  if (response.Item !== undefined) {
+  console.log(response);
+  if (response["$metadata"].httpStatusCode === 200) {
     return response.Item;
   } else {
     return {};
@@ -67,6 +66,11 @@ const deleteUser = async (email) => {
 
   const response = await client.send(command);
   console.log(response);
+  if(response["$metadata"].httpStatusCode === 200){
+    return {message: `user with email address ${email} was deleted`}
+  }else{
+    return {message: "failed to delete user"}
+  }
   
 };
 

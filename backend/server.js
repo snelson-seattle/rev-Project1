@@ -1,4 +1,6 @@
+require("dotenv").config();
 const express = require("express");
+const cookieParser = require("cookie-parser");
 const routes = require("./routes");
 const requestLogger = require("./middleware/logger");
 
@@ -6,6 +8,9 @@ const app = express();
 
 // Add Request Logging middleware
 app.use(requestLogger);
+
+// Add cookie parsing middleware
+app.use(cookieParser());
 
 // Add body parsing middleware
 app.use(express.urlencoded({extended: true}));

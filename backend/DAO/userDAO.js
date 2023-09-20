@@ -99,8 +99,6 @@ const updateUserInfo = async (user) => {
   const response = await client.send(command);
   
   if(response["$metadata"].httpStatusCode === 200){
-    delete user.manager;
-    delete user.password;
     return user;  
   }else{
     return {}

@@ -33,6 +33,8 @@ const updateUser = async (req, res) => {
     const updatedUser = await DAO.users.updateUserInfo(userObj);
 
     if (updatedUser) {
+      delete updatedUser.password;
+      delete updatedUser.manager;
       return res
         .status(201)
         .json({ message: "Successfully updated user info", user: updatedUser });

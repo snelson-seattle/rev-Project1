@@ -3,16 +3,16 @@ const jwt = require("jsonwebtoken");
 const DAO = require("../DAO");
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
   // Make sure request included an email and password
-  if (!email || !password) {
-    return res.status(400).json({ message: "email and password are required" });
+  if (!username || !password) {
+    return res.status(400).json({ message: "username and password are required" });
   }
 
   try {
     // Check if user already exists with given email
-    const existingUser = await DAO.users.getUser(email);
+    const existingUser = await DAO.users.getUser(username);
     if (!existingUser) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -27,7 +27,7 @@ const login = async (req, res) => {
     const accessToken = jwt.sign(
       {
         UserInfo: {
-          email: existingUser.email,
+          username: existingUser.username,
           manager: existingUser.manager,
         },
       },
@@ -36,7 +36,7 @@ const login = async (req, res) => {
     );
 
     const refreshToken = jwt.sign(
-      { email: existingUser.email },
+      { username: existingUser.username },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: "1d" }
     );
@@ -108,33 +108,31 @@ const refresh = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  // Make sure request included an email and password
-  if (!email || !password) {
-    return res.status(400).json({ message: "email and password are required" });
+  // Make sure request included a username and password
+  if (!username || !password) {
+    return res.status(400).json({ message: "username and password are required" });
   }
 
   try {
-    // Check if user already exists with given email
-    const existingUser = await DAO.users.getUser(email);
-    if (existingUser) {
-      return res.status(409).json({ message: "email address is in use" });
-    }
-
     // CREATE NEW USER
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await DAO.users.createUser({
-      email,
+      username,
       password: hashedPassword,
       manager: false,
     });
+
+    if(!newUser){
+      return res.status(409).json({message: "username is already in use"});
+    }
 
     // Create Access and Refresh Tokens
     const accessToken = jwt.sign(
       {
         UserInfo: {
-          email: newUser.email,
+          username: newUser.username,
           manager: newUser.manager,
         },
       },
@@ -143,7 +141,7 @@ const register = async (req, res) => {
     );
 
     const refreshToken = jwt.sign(
-      { email: newUser.email },
+      { username: newUser.username },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: "1d" }
     );

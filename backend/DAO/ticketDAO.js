@@ -14,19 +14,45 @@ const ddb = new DynamoDBClient({ region: process.env.AWS_REGION });
 const client = DynamoDBDocumentClient.from(ddb);
 const TABLE_NAME = process.env.TICKET_TABLE;
 
-const getTickets = async () => {
+const getPendingTickets = async () => {
   const command = new ScanCommand({
     TableName: TABLE_NAME,
+    FilterExpression: "#s = :status",
+    ExpressionAttributeNames: {
+      "#s": "status",
+    },
+    ExpressionAttributeValues: {
+      ":status": "Pending",
+    },
+    ConsistentRead: true,
   });
 
   const response = await client.send(command);
-  
+
   if (response["$metadata"].httpStatusCode === 200) {
     return response.Items;
   } else {
     return [];
   }
 };
+
+const getUserTickets = async (username) => {
+  const command = new ScanCommand({
+    TableName: TABLE_NAME,
+    FilterExpression: "username = :username",
+    ExpressionAttributeValues: {
+      ":username": username
+    },
+  });
+
+  const response = await client.send(command);
+  
+  if(response["$metadata"].httpStatusCode === 200){
+    return response.Items;
+  }else{
+    return []
+  }
+}
 
 const getTicketById = async (id) => {
   const command = new GetCommand({
@@ -37,7 +63,11 @@ const getTicketById = async (id) => {
   });
 
   const response = await client.send(command);
-  console.log(response);
+  if (response["$metadata"].httpStatusCode === 200) {
+    return response.Item;
+  } else {
+    return {};
+  }
 };
 
 const approveTicket = async (id) => {
@@ -46,26 +76,40 @@ const approveTicket = async (id) => {
     Key: {
       ticket_id: id,
     },
-    UpdateExpression: "SET status = :status",
+    ConditionExpression: "#s = :p",
+    UpdateExpression: "SET #s = :a",
+    ExpressionAttributeNames: {
+      "#s": "status"
+    },
     ExpressionAttributeValues: {
-      ":status": "Approved",
+      ":a": "Approved",
+      ":p": "Pending"
     },
     ReturnValues: "ALL_NEW",
   });
 
   const response = await client.send(command);
-  console.log(response);
+  if(response["$metadata"].httpStatusCode === 200) {
+    return response.Attributes
+  }else{
+    return {}
+  }
 };
 
 const createTicket = async (ticket) => {
   const id = crypto.randomUUID();
+  const newTicket = { ...ticket, ticket_id: id, status: "Pending" };
   const command = new PutCommand({
     TableName: TABLE_NAME,
-    Item: { ...ticket, ticket_id: id, status: "Pending" },
+    Item: newTicket,
   });
 
   const response = await client.send(command);
-  console.log(response);
+  if (response["$metadata"].httpStatusCode === 200) {
+    return newTicket;
+  } else {
+    return {};
+  }
 };
 
 const deleteTicket = async (id) => {
@@ -80,10 +124,11 @@ const deleteTicket = async (id) => {
   console.log(response);
 };
 
-
 module.exports = {
-  getTickets,
+  getPendingTickets,
+  getUserTickets,
   getTicketById,
   createTicket,
   deleteTicket,
+  approveTicket,
 };

@@ -19,20 +19,31 @@ const getTickets = async (req, res) => {
 
 const createTicket = async (req, res) => {
   const { username } = req;
-  const { amount, description } = req.body;
+  const { amount, description, type } = req.body;
 
-  if (!amount || !description) {
+  if (!amount || !description || !type) {
     return res
       .status(400)
-      .json({ message: "amount and description are required" });
+      .json({ message: "amount, description, and type are required" });
   }
 
   try {
-    const newTicket = await DAO.tickets.createTicket({
-      amount,
-      description,
-      username,
-    });
+    let newTicket = null;
+    switch (type) {
+      case "Travel":
+      case "Food":
+      case "Lodging":
+      case "Other":
+        newTicket = await DAO.tickets.createTicket({
+          amount,
+          type,
+          description,
+          username,
+        });
+        break;
+      default:
+        return res.status(400).json({ message: "invalid ticket type" });
+    }
 
     if (!newTicket) {
       return res.status(500).json({ message: "Something went wrong" });

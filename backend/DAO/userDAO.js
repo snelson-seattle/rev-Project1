@@ -5,6 +5,7 @@ const {
   GetCommand,
   DeleteCommand,
   ScanCommand,
+  UpdateCommand,
 } = require("@aws-sdk/lib-dynamodb");
 
 const ddb = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -40,6 +41,71 @@ const getUser = async (username) => {
     return {};
   }
 };
+
+const updateUserToManager = async (username) => {
+  const command = new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      username,
+    },
+    UpdateExpression: "SET #m = :m",
+    ExpressionAttributeNames: {
+      "#m": "manager",
+    },
+    ExpressionAttributeValues: {
+      ":m": true
+    },
+    ReturnValues: "ALL_NEW"
+  });
+
+  const response = await client.send(command);
+  if(response["$metadata"].httpStatusCode === 200){
+    return response.Attributes;
+  }else{
+    return {}
+  }
+}
+
+const updateManagerToUser = async (username) => {
+  const command = new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      username,
+    },
+    UpdateExpression: "SET #m = :m",
+    ExpressionAttributeNames: {
+      "#m": "manager",
+    },
+    ExpressionAttributeValues: {
+      ":m": false
+    },
+    ReturnValues: "ALL_NEW"
+  });
+
+  const response = await client.send(command);
+  if(response["$metadata"].httpStatusCode === 200){
+    return response.Attributes;
+  }else{
+    return {}
+  }
+}
+
+const updateUserInfo = async (user) => {
+  const command = new PutCommand({
+    TableName: TABLE_NAME,
+    Item: user
+  });
+
+  const response = await client.send(command);
+  
+  if(response["$metadata"].httpStatusCode === 200){
+    delete user.manager;
+    delete user.password;
+    return user;  
+  }else{
+    return {}
+  }
+}
 
 const createUser = async (user) => {
   const command = new PutCommand({
@@ -78,4 +144,7 @@ module.exports = {
   getUser,
   createUser,
   deleteUser,
+  updateUserToManager,
+  updateManagerToUser,
+  updateUserInfo
 };

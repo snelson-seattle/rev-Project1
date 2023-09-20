@@ -96,6 +96,32 @@ const approveTicket = async (id) => {
   }
 };
 
+const denyTicket = async (id) => {
+  const command = new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      ticket_id: id,
+    },
+    ConditionExpression: "#s = :p",
+    UpdateExpression: "SET #s = :d",
+    ExpressionAttributeNames: {
+      "#s": "status"
+    },
+    ExpressionAttributeValues: {
+      ":d": "Denied",
+      ":p": "Pending"
+    },
+    ReturnValues: "ALL_NEW",
+  });
+
+  const response = await client.send(command);
+  if(response["$metadata"].httpStatusCode === 200) {
+    return response.Attributes
+  }else{
+    return {}
+  }
+}
+
 const createTicket = async (ticket) => {
   const id = crypto.randomUUID();
   const newTicket = { ...ticket, ticket_id: id, status: "Pending" };
@@ -131,4 +157,5 @@ module.exports = {
   createTicket,
   deleteTicket,
   approveTicket,
+  denyTicket
 };

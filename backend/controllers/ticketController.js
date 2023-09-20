@@ -7,7 +7,7 @@ const getTickets = async (req, res) => {
     if (manager) {
       const tickets = await DAO.tickets.getPendingTickets();
       return res.status(200).json(tickets);
-    }else{
+    } else {
       const tickets = await DAO.tickets.getUserTickets(username);
       return res.status(200).json(tickets);
     }
@@ -67,6 +67,20 @@ const approveTicket = async (req, res) => {
 
 const denyTicket = async (req, res) => {
   const { id } = req.params;
+
+  try {
+    const approvedTicket = await DAO.tickets.denyTicket(id);
+    if (approvedTicket) {
+      return res.status(201).json({ message: `Ticket# ${id} denied` });
+    }
+
+    return res.status(500).json({ message: "Something went wrong" });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(400)
+      .json({ message: "Can only deny tickets that have 'Pending' status" });
+  }
 };
 
 module.exports = {

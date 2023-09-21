@@ -125,7 +125,7 @@ const register = async (req, res) => {
     });
 
     if(!newUser){
-      return res.status(409).json({message: "username is already in use"});
+      
     }
 
     // Create Access and Refresh Tokens
@@ -158,8 +158,13 @@ const register = async (req, res) => {
       .status(201)
       .json({ message: "New user created successfully", accessToken });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Something went wrong" });
+    if(error["$fault"]){
+      return res.status(409).json({message: "username is already in use"});
+    }else{
+      console.error(error);
+      return res.status(500).json({message: "Something went wrong"});
+    }
+    
   }
 };
 

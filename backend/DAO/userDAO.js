@@ -115,8 +115,10 @@ const createUser = async (user) => {
   const response = await client.send(command);
   if (response["$metadata"].httpStatusCode === 200) {
     return user;
-  } else {
-    return {};
+  }
+
+  if(response["$metadata"].httpStatusCode === 400){
+    return {}
   }
 };
 

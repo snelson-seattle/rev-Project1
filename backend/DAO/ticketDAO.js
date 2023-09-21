@@ -54,6 +54,29 @@ const getUserTickets = async (username) => {
   }
 }
 
+const getFilteredUserTickets = async (username, ticketType) => {
+  const command = new ScanCommand({
+    TableName: TABLE_NAME,
+    FilterExpression: "#username = :username AND #type = :type",
+    ExpressionAttributeNames: {
+      "#username": "username",
+      "#type": "type"
+    },
+    ExpressionAttributeValues: {
+      ":username": username,
+      ":type": ticketType
+    },
+  });
+
+  const response = await client.send(command);
+  
+  if(response["$metadata"].httpStatusCode === 200){
+    return response.Items;
+  }else{
+    return []
+  }
+}
+
 const getTicketById = async (id) => {
   const command = new GetCommand({
     TableName: TABLE_NAME,
@@ -153,6 +176,7 @@ const deleteTicket = async (id) => {
 module.exports = {
   getPendingTickets,
   getUserTickets,
+  getFilteredUserTickets,
   getTicketById,
   createTicket,
   deleteTicket,

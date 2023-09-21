@@ -8,6 +8,23 @@ const getTickets = async (req, res) => {
       const tickets = await DAO.tickets.getPendingTickets();
       return res.status(200).json(tickets);
     } else {
+      if (req.query.type) {
+        console.log(req.query.type);
+        const type = req.query.type;
+        switch (type) {
+          case "Food":
+          case "Travel":
+          case "Lodging":
+          case "Other":
+            const tickets = await DAO.tickets.getFilteredUserTickets(
+              username,
+              type
+            );
+            return res.status(200).json(tickets);
+          default:
+            return res.status(400).json({ message: "invalid ticket type" });
+        }
+      }
       const tickets = await DAO.tickets.getUserTickets(username);
       return res.status(200).json(tickets);
     }
